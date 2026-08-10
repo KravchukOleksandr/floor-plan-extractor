@@ -1,0 +1,15 @@
+services:
+  extractor:
+    build: .
+    runtime: runc
+    ports:
+      - "8000:8000"
+    environment:
+      DEVICE: ${DEVICE:-auto}
+      MODEL_PATH: /app/weights/wall_projection.pt
+    volumes:
+      - model-cache:/models/huggingface
+    restart: unless-stopped
+
+volumes:
+  model-cache:
