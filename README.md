@@ -8,12 +8,12 @@ The RGB image is resized with aspect-ratio-preserving padding and normalized usi
 
 $$
 \begin{aligned}
-D_n &= 2\,\operatorname{clip}\left(\frac{D-P_1(D)}{P_{99}(D)-P_1(D)},0,1\right)-1 \\
-X &= \operatorname{concat}\left(\frac{I-\mu}{\sigma},D_n\right) \\
-(F_1,F_2,F_3,F_4) &= \operatorname{ConvNeXtS}(X) \\
-M_{top} &= \operatorname{sigmoid}\left(\operatorname{UPerNet}(F_1,F_2,F_3,F_4)\right) \\
-H &= \operatorname{HomographyHead}(F_4) \\
-M_{floor} &= \operatorname{warp}(M_{top},H)
+D_n &= 2\,\mathrm{clip}\left(\frac{D-P_1(D)}{P_{99}(D)-P_1(D)},0,1\right)-1 \\
+X &= \mathrm{concat}\left(\frac{I-\mu}{\sigma},D_n\right) \\
+(F_1,F_2,F_3,F_4) &= \mathrm{ConvNeXtS}(X) \\
+M_{top} &= \mathrm{sigmoid}\left(\mathrm{UPerNet}(F_1,F_2,F_3,F_4)\right) \\
+H &= \mathrm{HomographyHead}(F_4) \\
+M_{floor} &= \mathrm{warp}(M_{top},H)
 \end{aligned}
 $$
 
@@ -21,9 +21,9 @@ Room polygons are extracted from the projected mask using hysteresis thresholdin
 
 $$
 \begin{aligned}
-W &= \operatorname{Morphology}\left(\operatorname{Hysteresis}(M_{floor},\tau_{weak},\tau_{strong})\right) \\
-O &= \operatorname{FloodFill}_{\partial\Omega}(\neg W) \\
-\{R_i\} &= \operatorname{ConnectedComponents}(\neg W \setminus O) \\
+W &= \mathrm{Morphology}\left(\mathrm{Hysteresis}(M_{floor},\tau_{weak},\tau_{strong})\right) \\
+O &= \mathrm{FloodFill}_{\partial\Omega}(\neg W) \\
+\{R_i\} &= \mathrm{ConnectedComponents}(\neg W \setminus O) \\
 A_i &= |R_i|, \qquad r_i=\frac{A_i}{\sum_j A_j}
 \end{aligned}
 $$
