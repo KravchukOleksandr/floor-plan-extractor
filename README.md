@@ -11,31 +11,31 @@ Additional inputs, intermediate masks, annotated images, and JSON outputs are av
 
 ## Approach
 
-The RGB image is resized with aspect-ratio-preserving padding and normalized using ImageNet statistics. Depth Anything V2 provides a relative depth map, which is robustly normalized between its 1st and 99th percentiles. The resulting RGBD tensor is processed by a ConvNeXt-S backbone with a UPerNet segmentation head and a homography regression head.
+Let $I$ denote the normalized RGB input, and let $D$ denote the normalized depth map estimated from the corresponding RGB image using Depth Anything V2. The trained custom wall-projection network performs the following forward pass:
 
 $$
 \begin{aligned}
-D_n &= 2\,\mathrm{clip}\left(\frac{D-P_1(D)}{\max(P_{99}(D)-P_1(D),\varepsilon)},0,1\right)-1 \\
-X &= \mathrm{concat}\left(\frac{I-\mu}{\sigma},D_n\right) \\
-(F_1,F_2,F_3,F_4) &= \mathrm{ConvNeXtS}(X) \\
-M_{top} &= \mathrm{UPerNet}(F_1,F_2,F_3,F_4) \\
-\Delta h &= \mathrm{MLP}\left(\mathrm{Pool}(\mathrm{Conv}(F_4))\right) \in \mathbb{R}^8 \\
-H &= \begin{bmatrix}
-1+\Delta h_1 & \Delta h_2 & \Delta h_3 \\
-\Delta h_4 & 1+\Delta h_5 & \Delta h_6 \\
-\Delta h_7 & \Delta h_8 & 1
-\end{bmatrix} \\
-M_{floor} &= \mathrm{warp}(M_{top},H)
+X &= \operatorname{concat}(I,D) \\
+(F_1,F_2,F_3,F_4)
+  &= \operatorname{ConvNeXtS}_{\mathrm{backbone}}(X) \\
+M_{\mathrm{top}}
+  &= \operatorname{sigmoid}\!\left(
+     \operatorname{UPerNet}_{\mathrm{head}}(F_1,F_2,F_3,F_4)
+     \right) \\
+H &= \operatorname{HomographyHead}(F_4) \\
+M_{\mathrm{floor}} &= \operatorname{warp}(M_{\mathrm{top}},H)
 \end{aligned}
 $$
 
+Here, $H$ is the predicted homography matrix, and $\operatorname{warp}$ applies its inverse-mapped perspective transformation to the top-view wall probability map using bilinear interpolation.
+
 The floor-projected wall probability is converted into room polygons with a deterministic post-processing pipeline:
 
-1. **Wall reconstruction** — clear the image frame, apply hysteresis thresholding, then seal local cracks with elliptical closing and slight dilation.
-2. **Gap completion** — connect aligned skeleton endpoints only when the bridge creates another enclosed region.
-3. **Exterior removal** — flood-fill free space from the image borders and discard everything reachable from outside.
-4. **Room detection** — label the remaining eight-connected components and reject regions that are too small or narrow.
-5. **Polygon output** — trace and simplify contours with Douglas–Peucker, restore the original image coordinates, and compute relative pixel areas.
+1. **Wall reconstruction** — clear the image frame, apply hysteresis thresholding by binary propagation, then seal local cracks with elliptical morphological closing and dilation.
+2. **Gap completion** — skeletonize the wall mask, estimate endpoint tangents, and use cosine alignment to connect nearby endpoints only when the bridge creates another enclosed region; set its thickness from the Euclidean distance transform.
+3. **Exterior removal** — perform border-seeded binary propagation (morphological reconstruction) through free space and discard everything reachable from outside.
+4. **Room detection** — label the remaining eight-connected components and reject regions with insufficient area or Euclidean distance-transform radius.
+5. **Polygon output** — trace external contours, simplify them with the Ramer–Douglas–Peucker algorithm, restore the original image coordinates, and compute relative pixel areas.
 
 ## Assumptions
 
