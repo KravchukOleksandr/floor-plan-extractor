@@ -13,6 +13,7 @@ from .postprocess import PRESETS
 
 @asynccontextmanager
 async def lifespan(app):
+    # Keep the heavy models resident for all requests handled by this worker.
     app.state.extractor = FloorPlanExtractor(
         os.getenv("MODEL_PATH"), os.getenv("DEVICE", "auto"), os.getenv("DEPTH_MODEL")
     )
@@ -36,11 +37,18 @@ def presets():
 async def extract(image: UploadFile = File(...), preset: str = Query("weak")):
     if preset not in PRESETS:
         raise HTTPException(400, f"Unknown preset: {preset}")
+
+    # Decode uploads in memory to avoid temporary input files.
     try:
         source = Image.open(BytesIO(await image.read())).convert("RGB")
     except (UnidentifiedImageError, OSError) as error:
         raise HTTPException(400, "Unsupported image") from error
+
+    # Return every deliverable as one self-contained archive.
     result = app.state.extractor.extract(source, preset)
     name = f"{Path(image.filename or 'result').stem}_result.zip"
-    return Response(result.archive(), media_type="application/zip",
-                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
+    return Response(
+        result.archive(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )

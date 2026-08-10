@@ -12,6 +12,8 @@ def main():
     parser.add_argument("--device", default="auto")
     parser.add_argument("--weights", type=Path)
     args = parser.parse_args()
+
+    # Load both models once, then process the requested image.
     extractor = FloorPlanExtractor(args.weights, args.device)
     result = extractor.extract(args.input, args.preset)
     result.save(args.output)

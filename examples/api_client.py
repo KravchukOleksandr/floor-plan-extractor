@@ -6,6 +6,8 @@ import requests
 
 
 image = Path("inputs/apartment.webp")
+
+# Send the image to the long-running extraction service.
 with image.open("rb") as file:
     response = requests.post(
         "http://localhost:8000/extract",
@@ -14,5 +16,7 @@ with image.open("rb") as file:
         timeout=300,
     )
 response.raise_for_status()
+
+# Unpack every generated artifact into one output directory.
 with ZipFile(BytesIO(response.content)) as archive:
     archive.extractall("outputs/apartment")
