@@ -15,19 +15,19 @@ Let $I$ denote the normalized RGB input, and let $D$ denote the normalized depth
 
 $$
 \begin{aligned}
-X &= \operatorname{concat}(I,D) \\
+X &= \mathrm{concat}(I,D) \\
 (F_1,F_2,F_3,F_4)
-  &= \operatorname{ConvNeXtS}_{\mathrm{backbone}}(X) \\
+  &= \mathrm{ConvNeXtS}_{\mathrm{backbone}}(X) \\
 M_{\mathrm{top}}
-  &= \operatorname{sigmoid}\!\left(
-     \operatorname{UPerNet}_{\mathrm{head}}(F_1,F_2,F_3,F_4)
+  &= \mathrm{sigmoid}\!\left(
+     \mathrm{UPerNet}_{\mathrm{head}}(F_1,F_2,F_3,F_4)
      \right) \\
-H &= \operatorname{HomographyHead}(F_4) \\
-M_{\mathrm{floor}} &= \operatorname{warp}(M_{\mathrm{top}},H)
+H &= \mathrm{HomographyHead}(F_4) \\
+M_{\mathrm{floor}} &= \mathrm{warp}(M_{\mathrm{top}},H)
 \end{aligned}
 $$
 
-Here, $H$ is the predicted homography matrix, and $\operatorname{warp}$ applies its inverse-mapped perspective transformation to the top-view wall probability map using bilinear interpolation.
+Here, $H$ is the predicted homography matrix, and $\mathrm{warp}$ applies its inverse-mapped perspective transformation to the top-view wall probability map using bilinear interpolation.
 
 The floor-projected wall probability is converted into room polygons with a deterministic post-processing pipeline:
 
