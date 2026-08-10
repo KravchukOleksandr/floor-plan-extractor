@@ -14,17 +14,17 @@ Additional inputs, intermediate masks, annotated images, and JSON outputs are av
 Let $I$ denote the normalized RGB input, and let $D$ denote the normalized depth map estimated from the corresponding RGB image using Depth Anything V2. The trained custom wall-projection network performs the following forward pass:
 
 $$
-\begin{aligned}
-X &= \mathrm{concat}(I,D) \\
+\begin{array}{rcl}
+X & = & \mathrm{concat}(I,D) \\
 (F_1,F_2,F_3,F_4)
-  &= \mathrm{ConvNeXtS}_{\mathrm{backbone}}(X) \\
+  & = & \mathrm{ConvNeXtS}_{\mathrm{backbone}}(X) \\
 M_{\mathrm{top}}
-  &= \mathrm{sigmoid}\!\left(
+  & = & \mathrm{sigmoid}\left(
      \mathrm{UPerNet}_{\mathrm{head}}(F_1,F_2,F_3,F_4)
      \right) \\
-H &= \mathrm{HomographyHead}(F_4) \\
-M_{\mathrm{floor}} &= \mathrm{warp}(M_{\mathrm{top}},H)
-\end{aligned}
+H & = & \mathrm{HomographyHead}(F_4) \\
+M_{\mathrm{floor}} & = & \mathrm{warp}(M_{\mathrm{top}},H)
+\end{array}
 $$
 
 Here, $H$ is the predicted homography matrix, and $\mathrm{warp}$ applies its inverse-mapped perspective transformation to the top-view wall probability map using bilinear interpolation.
