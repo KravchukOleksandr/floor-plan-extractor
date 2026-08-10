@@ -2,44 +2,44 @@
 
 Extract room polygons and relative pixel areas from a single RGB image of a 3D floor plan.
 
+<p align="center">
+  <img src="examples/test_2/annotated.png" width="49%" />
+  <img src="examples/test_4/annotated.png" width="49%" />
+</p>
+
+Additional inputs, intermediate masks, annotated images, and JSON outputs are available in [`examples/`](examples/).
+
 ## Approach
 
 The RGB image is resized with aspect-ratio-preserving padding and normalized using ImageNet statistics. Depth Anything V2 provides a relative depth map, which is robustly normalized between its 1st and 99th percentiles. The resulting RGBD tensor is processed by a ConvNeXt-S backbone with a UPerNet segmentation head and a homography regression head.
 
 $$
 \begin{aligned}
-D_n &= 2\,\mathrm{clip}\left(\frac{D-P_1(D)}{P_{99}(D)-P_1(D)},0,1\right)-1 \\
+D_n &= 2\,\mathrm{clip}\left(\frac{D-P_1(D)}{\max(P_{99}(D)-P_1(D),\varepsilon)},0,1\right)-1 \\
 X &= \mathrm{concat}\left(\frac{I-\mu}{\sigma},D_n\right) \\
 (F_1,F_2,F_3,F_4) &= \mathrm{ConvNeXtS}(X) \\
-M_{top} &= \mathrm{sigmoid}\left(\mathrm{UPerNet}(F_1,F_2,F_3,F_4)\right) \\
-H &= \mathrm{HomographyHead}(F_4) \\
+M_{top} &= \mathrm{UPerNet}(F_1,F_2,F_3,F_4) \\
+\Delta h &= \mathrm{MLP}\left(\mathrm{Pool}(\mathrm{Conv}(F_4))\right) \in \mathbb{R}^8 \\
+H &= \begin{bmatrix}
+1+\Delta h_1 & \Delta h_2 & \Delta h_3 \\
+\Delta h_4 & 1+\Delta h_5 & \Delta h_6 \\
+\Delta h_7 & \Delta h_8 & 1
+\end{bmatrix} \\
 M_{floor} &= \mathrm{warp}(M_{top},H)
 \end{aligned}
 $$
 
-Room polygons are extracted from the projected mask using hysteresis thresholding, morphological closing, and short collinear-gap completion. The exterior is found by flood-filling free space from the image borders. The remaining enclosed connected components are simplified into room polygons.
+The floor-projected wall probability is converted into room polygons with a deterministic post-processing pipeline:
 
-$$
-\begin{aligned}
-W &= \mathrm{Morphology}\left(\mathrm{Hysteresis}(M_{floor},\tau_{weak},\tau_{strong})\right) \\
-O &= \mathrm{FloodFill}_{\partial\Omega}(\neg W) \\
-\{R_i\} &= \mathrm{ConnectedComponents}(\neg W \setminus O) \\
-A_i &= |R_i|, \qquad r_i=\frac{A_i}{\sum_j A_j}
-\end{aligned}
-$$
+1. **Wall reconstruction** — clear the image frame, apply hysteresis thresholding, then seal local cracks with elliptical closing and slight dilation.
+2. **Gap completion** — connect aligned skeleton endpoints only when the bridge creates another enclosed region.
+3. **Exterior removal** — flood-fill free space from the image borders and discard everything reachable from outside.
+4. **Room detection** — label the remaining eight-connected components and reject regions that are too small or narrow.
+5. **Polygon output** — trace and simplify contours with Douglas–Peucker, restore the original image coordinates, and compute relative pixel areas.
 
 ## Assumptions
 
 These are **<u>TEMPORARY</u>** limitations of the current prototype: wall surfaces are expected to have a color close to white, and the visible wall-cut plane is assumed to be parallel to the floor plane. Inputs that strongly violate either assumption may produce incomplete wall masks or geometrically inconsistent room polygons.
-
-## Results
-
-Additional inputs, intermediate masks, annotated images, and JSON outputs are available in [`examples/`](examples/).
-
-<p align="center">
-  <img src="examples/test_2/annotated.png" width="49%" />
-  <img src="examples/test_4/annotated.png" width="49%" />
-</p>
 
 ## Quickstart
 
