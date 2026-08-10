@@ -63,7 +63,8 @@ curl -X POST "http://localhost:8000/extract?preset=weak" \
   -F "image=@examples/test_2/input.webp" \
   -o result.zip
 
-unzip result.zip -d outputs/test_2
+mkdir -p outputs/test_2
+unzip -o result.zip -d outputs/test_2
 ```
 
 The archive contains:
